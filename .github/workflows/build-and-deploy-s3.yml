@@ -1,0 +1,112 @@
+name: build-and-deploy-s3
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  PHP_VERSION: '7.4'
+  NODE_VERSION: '14'
+  THEME_PATH: web/themes/custom/theme
+
+jobs:
+  build-drupal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+
+      - name: Use actions/checkout@v2
+        uses: actions/checkout@v2
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-dev
+
+  # build-theme:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Use actions/checkout@v2
+  #       uses: actions/checkout@v2
+
+  #     - name: Set up Node ${{ env.NODE_VERSION }}
+  #       uses: actions/setup-node@v2
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #         cache: 'npm'
+  #         cache-dependency-path: ${{ env.THEME_PATH }}/package-lock.json
+
+  #     - name: Install node dependencies
+  #       working-directory: ${{ env.THEME_PATH }}
+  #       run: npm install
+
+  #     - name: Build theme
+  #       working-directory: ${{ env.THEME_PATH }}
+  #       run: npm run sass-compile
+
+  #     - name: Upload theme artifact
+  #       uses: actions/upload-artifact@v2
+  #       with:
+  #         name: theme-artifact
+  #         # Use * to delimit the directory structure that will be included.
+  #         path: "**/${{ env.THEME_PATH }}/css"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [ build-drupal ]
+    environment:
+      name: Production
+      url: https://api.umami.pinciuc.com
+    steps:
+      - name: Use actions/checkout@v2
+        uses: actions/checkout@v2
+
+      - name: Set up PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+      - name: Cache dependencies
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-dev
+
+      # - name: Download theme artifact
+      #   uses: actions/download-artifact@v2
+      #   with:
+      #     name: theme-artifact
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} # if you have/need it
+          aws-region: ca-central-1
+
+      - name: Create zip archive
+        run: zip -y -q -x ".git/*" -r ${{ secrets.AWS_S3_DEPLOY_FILENAME }} .
+
+      - name: Copy archive to S3 with the AWS CLI
+        run: aws s3 cp ${{ secrets.AWS_S3_DEPLOY_FILENAME }} s3://${{ secrets.AWS_S3_BUCKET }}/${{ secrets.AWS_S3_DEPLOY_PATH }}/
