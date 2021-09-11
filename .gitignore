@@ -4,6 +4,7 @@
 
 # Editor and OS fragments.
 .DS_Store
+/.vscode/
 
 # This file contains default .gitignore rules. To use it, copy it to .gitignore,
 # and it will cause files like your settings.php and user-uploaded files to be

@@ -21,6 +21,7 @@
         "drupal/core-project-message": "^9.2",
         "drupal/core-recommended": "^9.2",
         "drupal/gatsby": "^1.0@RC",
+        "drupal/jsonapi_extras": "^3.19",
         "drupal/jsonapi_menu_items": "^1.2",
         "drush/drush": "^10"
     },
