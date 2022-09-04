@@ -1,4 +1,7 @@
+_core:
+  default_config_hash: '-xBft7gLYifC9YdTJUXA0W_QNDfPVcU6D9NjOFCdjYU'
 server_url: 'http://localhost:8000/'
+preview_callback_url: 'http://localhost:8000/__refresh'
 path_mapping: ''
 incrementalbuild_url: ''
 build_published: true
@@ -8,6 +11,3 @@ preview_entity_types:
   - menu_link_content
   - node
   - taxonomy_term
-preview_callback_url: 'http://localhost:8000/__refresh'
-_core:
-  default_config_hash: '-xBft7gLYifC9YdTJUXA0W_QNDfPVcU6D9NjOFCdjYU'
