@@ -1,0 +1,83 @@
+name: umami-drupal
+
+env_file:
+  - .lando/default.env
+  - .lando/local.env
+
+# Start with a recipe
+recipe: drupal9
+config:
+  via: nginx
+  webroot: web
+  xdebug: false
+  config:
+    php: .lando/php.ini
+
+# Additional services
+proxy:
+  mailhog:
+    - mail.umami-drupal.lndo.site
+
+services:
+  appserver:
+    overrides:
+      environment:
+        XDEBUG_MODE:
+    build:
+      - composer install
+      - .lando/install-settings.sh
+  # node:
+  #   type: node:10
+  #   overrides:
+  #     environment:
+  #       # This var allows the optipng node module to build correctly.
+  #       CPPFLAGS: -DPNG_ARM_NEON_OPT=0
+  #   globals:
+  #     grunt-cli: latest
+  #   build:
+  #     - cd /app/web/themes/custom/theme && npm install
+
+# Additional tooling
+tooling:
+  # switch: disabled
+  # push: disabled
+  # pull:
+  #   description: Pull things except code
+  #   options:
+  #     code:
+  #       default: none
+  xdebug:on:
+    service: appserver
+    description: Enable xdebug for nginx.
+    cmd: docker-php-ext-enable xdebug && pkill -o -USR2 php-fpm && echo "Enabling xdebug"
+    user: root
+  xdebug:off:
+    service: appserver
+    description: Disable xdebug for nginx.
+    cmd: rm /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && pkill -o -USR2 php-fpm && echo "Disabling xdebug"
+    user: root
+  # theme:build:
+  #   service: node
+  #   description: "Build the theme"
+  #   dir: /app/web/themes/custom/theme
+  #   cmd:
+  #     - grunt build --force
+  # theme:watch:
+  #   service: node
+  #   description: "Watch the theme for changes"
+  #   dir: /app/web/themes/custom/theme
+  #   cmd:
+  #     - grunt --force
+  # node:
+  #   service: node
+  # npm:
+  #   service: node
+  # grunt:
+  #   service: node
+
+# Event handlers
+events:
+  pre-db-export:
+    - appserver: drush cr
+  post-db-import:
+    - appserver: drush cr
